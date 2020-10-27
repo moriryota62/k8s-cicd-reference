@@ -1,0 +1,26 @@
+gitlabUrl: http://10.1.21.109/
+runnerRegistrationToken: "CzYp_yitXSdvoHkJmdxY"
+concurrent: 10
+checkInterval: 30
+rbac:
+  create: true
+  clusterWideAccess: true
+runners:
+  image: ubuntu:18.04
+  privileged: true
+  tags: "k8s"
+  builds:
+    cpuLimit: 200m
+    memoryLimit: 256Mi
+    cpuRequests: 100m
+    memoryRequests: 128Mi
+  services:
+    cpuLimit: 200m
+    memoryLimit: 256Mi
+    cpuRequests: 100m
+    memoryRequests: 128Mi
+  helpers:
+    cpuLimit: 200m
+    memoryLimit: 256Mi
+    cpuRequests: 100m
+    memoryRequests: 128Mi

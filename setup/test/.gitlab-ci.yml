@@ -1,0 +1,25 @@
+stages:
+  - build
+
+docker-build:
+  image: 
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  stage: build
+  variables:
+    ECR_HOST: 456247443832.dkr.ecr.ap-northeast-1.amazonaws.com
+  script:
+    - BUILD_DATE=`date "+%Y-%m%d-%H%M"` 
+    - |
+          cat > /kaniko/.docker/config.json <<EOF
+          {
+            "credHelpers": {
+              "${ECR_HOST}": "ecr-login"
+            }
+          }
+          EOF
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination ${ECR_HOST}/$CI_PROJECT_NAME:$BUILD_DATE
+  only:
+    - master
+  tags:
+    - k8s

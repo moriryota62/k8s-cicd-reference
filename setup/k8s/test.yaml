@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test-nginx
+  name: test-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-nginx
+  template:
+    metadata:
+      labels:
+        app: test-nginx
+    spec:
+      containers:
+      - image: 456247443832.dkr.ecr.ap-northeast-1.amazonaws.com/test:2020-0902-0554
+        name: test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: test-nginx
+  name: test-nginx
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: test-nginx
+  type: LoadBalancer
+---
