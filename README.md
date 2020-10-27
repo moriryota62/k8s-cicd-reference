@@ -27,39 +27,7 @@
 ### 背景
 CICD導入の前は次の様なフローで開発をしていました。まず、アプリケーション開発者がソースの作成/修正します。そして、必要に応じてビルドやテストを行い、問題なければ"source repo"にソースコードを格納します。この段階を``アプリ開発``と名付けます。その後、修正したソースを使用してdocker buildを行い、コンテナイメージを作成します。作成したコンテナイメージをプライベートなコンテナレジストリにdocker pushします。これはアプリケーション開発者またはインフラ管理者で行います。この段階を``コンテナ作成``と名付けます。最後に、インフラ管理者がK8sマニフェストのイメージ部分を修正し、K8sへデプロイします。この段階を``K8sデプロイ``と名付けます。図にすると以下の様になります。
 
-```mermaid
-graph LR;
-  A[ビルド/テスト];
-  B[コンテナイメージ作成];
-  C[K8sマニフェスト修正];
-  D[K8sデプロイ];
-  E[ソースコード修正];
-
-  db1[(source repo)];
-  db2[(image repo)];
-  db3[(k8s repo)];
-
-  E -- push --> db1;
-  E --- A;
-
-  subgraph アプリ開発;
-  A;
-  db1;
-  end;
-
-  db1 -- 資運連携 --> B;
-
-  subgraph コンテナ作成;
-  B	-- push --> db2;
-  end;
-
-  db2 -- イメージタグ確認 --> C;
-
-  subgraph K8sデプロイ;
-  C -- push --> db3;
-  db3 -- apply --> D;
-  end;
-```
+![](./image/app-before.png)
 
 上記フローでも開発は可能でしたが以下の様な課題を抱えていました。
 1. 開発者のローカル端末で作業すると”source repo"への"push"を忘れることがある。
@@ -73,37 +41,7 @@ graph LR;
 ### CICDによる効果
 CICD導入後は次の様なフローとなります。まず、アプリケーション開発者がソースの作成/修正し"source repo"へ"push"します。この"source repo"への"push"をトリガーにあとはすべて**自動**で行われます。必要に応じアプリケーションのビルド/テストが実行されます。その後、"docker build&push"が行われます。コンテナレジストリに最新のイメージが"push"されるとK8sマニフェストを書き換え、K8sへのデプロイが実行されます。導入前の``アプリ開発``に相当する部分の自動化を``Continuous Integration``と呼び、``コンテナ作成``の部分を``Continuous Delivery``、``K8sデプロイ``の部分を``K8sデプロイ``と呼びます。（呼び方については諸説あるため本PJにおける呼び方です。）
 
-```mermaid
-graph LR
-  A[ビルド/テスト]
-  B[コンテナイメージ作成] 
-  C[K8sマニフェスト修正]
-  D[K8sデプロイ]
-  E[ソースコード修正]
-
-  db1[(source repo)]
-  db2[(image repo)]
-  db3[(k8s repo)]
-
-  E -- push --> db1
-
-  subgraph Continuous Integration
-  db1 --> A
-  end
-
-  A -- 資運連携 --> B
-
-  subgraph Continuous Delivery
-  B	-- push --> db2
-  end
-
-  db2 -- イメージタグ確認 --> C
-
-  subgraph Continuous Deploy
-  C -- push --> db3
-  db3 -- apply --> D
-  end
-```
+![](./image/app-after.png)
 
 CICDを導入することで課題は以下のように解決されました。
 1. ”source repo"への"push"がトリガーなのでpusu忘れがなくなる。
@@ -120,28 +58,7 @@ CICDを導入することで課題は以下のように解決されました。
 
 CICD導入の前は次の様なフローで開発をしていました。インフラ管理者がK8sのマニフェストを更新し開発環境にデプロイして動作を確認します。期待した動作を確認した後、ステージング環境にデプロイします。K8sマニフェストはKustomizeで管理しており、baseとoverlay(dev/stg)に分けています。baseは環境で共通するマニフェスト、overlayは各環境固有のマニフェストです。
 
-```mermaid
-graph LR
-  A[マニフェスト修正]
-  B[K8sデプロイ] 
-  C[マニフェスト修正]
-  D[K8sデプロイ]
-  
-  db1[(k8s repo)]
-
-  subgraph dev
-  A -- apply --> B
-  end
-
-  B -- 動作確認OK --> C
-
-  subgraph stg
-  C -- apply --> D
-  end
-
-  B -- push --> db1
-  D -- push --> db1
-```
+![](./image/k8s-before.png)
 
 上記フローでも開発は可能でしたが以下の様な課題を抱えていました。
 1. K8sへのapplyは手動のため、K8sマニフェストレポジトリの状態と実機の状態が一致していないことがある。
@@ -153,30 +70,7 @@ graph LR
 
 CICD導入後は次の様なフローとなります。devに対する修正はdev用のブランチに取り込みます。dev用ブランチが更新されると自動でdevのK8sにデプロイされます。devで動作を確認した後、dev用ブランチからstg用ブランチへ修正を取り込みます。stg用ブランチが更新されると自動でstgのk8sにデプロイされます。また、各ブランチが更新されると自動でマニフェストが設計方針にしたがっているかポリシーチェックを実行します。
 
-```mermaid
-graph LR
-  A[マニフェスト修正]
-  B[K8sデプロイ] 
-  C[マニフェスト修正]
-  D[K8sデプロイ]
-  
-  db1[(k8s repo dev branch)]
-  db2[(k8s repo stg branch)]
-
-  subgraph dev
-  A -- push --> db1
-  db1 -- ポリシーチェック -->　db1
-  db1 --> B
-  end
-
-  B -- 動作確認OK --> C
-
-  subgraph stg
-  C -- push --> db2
-  db2 -- ポリシーチェック --> db2
-  db2 --> D
-  end
-```
+![](./image/k8s-after.png)
 
 CICDを導入することで課題は以下のように解決されました。
 1. k8sとk8sレポの状態が常に等しい。
